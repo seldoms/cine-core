@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/seldoms/cine-core/schemas/storyboard.schema.json",
+  "title": "Storyboard",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "story_id",
+    "fps",
+    "grid_formula",
+    "target_duration_sec",
+    "planned_duration_sec",
+    "shot_count",
+    "shots"
+  ],
+  "properties": {
+    "story_id": { "type": "string", "minLength": 1 },
+    "fps": { "const": 24 },
+    "grid_formula": { "const": "17n+5" },
+    "target_duration_sec": { "type": "number" },
+    "planned_duration_sec": { "type": "number" },
+    "shot_count": { "type": "integer", "minimum": 1 },
+    "shots": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/shot" }
+    }
+  },
+  "$defs": {
+    "shot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shot_id",
+        "scene_id",
+        "ordinal",
+        "frame_count",
+        "grid_n",
+        "duration_sec",
+        "subject_ids",
+        "subject_count",
+        "location_id",
+        "wardrobe_variant_id",
+        "reference_plan",
+        "dialogue",
+        "camera",
+        "action",
+        "action_group",
+        "continuation",
+        "first_frame",
+        "video_prompt",
+        "regeneration"
+      ],
+      "properties": {
+        "shot_id": { "type": "string", "minLength": 1 },
+        "scene_id": { "type": "string", "minLength": 1 },
+        "ordinal": { "type": "integer", "minimum": 1 },
+        "frame_count": { "type": "integer", "minimum": 90, "maximum": 260 },
+        "grid_n": { "type": "integer", "minimum": 5, "maximum": 15 },
+        "duration_sec": { "type": "number", "exclusiveMinimum": 0 },
+        "subject_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": { "type": "string" }
+        },
+        "subject_count": { "const": 1 },
+        "location_id": { "type": "string", "minLength": 1 },
+        "wardrobe_variant_id": { "type": "string", "minLength": 1 },
+        "reference_plan": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ref_id", "role"],
+            "properties": {
+              "ref_id": { "type": "string", "minLength": 1 },
+              "role": { "enum": ["subject", "location", "wardrobe"] }
+            }
+          }
+        },
+        "dialogue": {
+          "type": "array",
+          "maxItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["speaker_id", "line"],
+            "properties": {
+              "speaker_id": { "type": "string" },
+              "line": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["framing", "angle", "forbids_hand_closeup"],
+          "properties": {
+            "framing": { "type": "string", "minLength": 1 },
+            "angle": { "type": "string", "minLength": 1 },
+            "forbids_hand_closeup": { "const": true }
+          }
+        },
+        "action": { "type": "string", "minLength": 1 },
+        "action_group": { "type": "string", "minLength": 1 },
+        "continuation": {
+          "anyOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["mode", "from_shot_id"],
+              "properties": {
+                "mode": { "const": "same_action_extend" },
+                "from_shot_id": { "type": "string", "minLength": 1 }
+              }
+            }
+          ]
+        },
+        "first_frame": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height", "latent_node", "prompt"],
+          "properties": {
+            "width": { "const": 768 },
+            "height": { "const": 1344 },
+            "latent_node": { "const": "EmptySD3LatentImage" },
+            "prompt": { "type": "string", "minLength": 1 }
+          }
+        },
+        "video_prompt": { "$ref": "#/$defs/prompt" },
+        "regeneration": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "prompt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject_definitions",
+        "summary",
+        "retention_analysis",
+        "detailed_description",
+        "overall_soundscape",
+        "non_diegetic_music"
+      ],
+      "properties": {
+        "subject_definitions": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "retention_analysis": { "type": "string", "minLength": 1 },
+        "detailed_description": { "type": "string", "minLength": 1 },
+        "overall_soundscape": { "type": "string", "minLength": 1 },
+        "non_diegetic_music": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

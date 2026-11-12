@@ -1,0 +1,61 @@
+{
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "kf-s001"
+    },
+    "_cinecore": "首帧锁定。视频从这张已审核静帧开始。"
+  },
+  "2": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "char-example-still-daily",
+      "role": "subject"
+    },
+    "_cinecore": "仅本镜头参考，不是全片角色库"
+  },
+  "3": {
+    "class_type": "LoadImage",
+    "inputs": {
+      "image": "loc-example-still",
+      "role": "location"
+    },
+    "_cinecore": "仅本镜头参考，不是全片角色库"
+  },
+  "4": {
+    "class_type": "H3Ref2VASampler",
+    "inputs": {
+      "width": 416,
+      "height": 736,
+      "frames": 124,
+      "fps": 24,
+      "seed": 1,
+      "prompt": "subject_definitions:\n<Subject 1>：示例人物，短发，深色外套。\n<Picture 1>：这一镜已审核的首帧。\n<Picture 2>：这一镜的场景静帧。\n\nsummary:\n[keyframe completion + reference generation] 示例镜头只拍这一个人，从首帧开始。\n\nretention_analysis:\n<Subject 1>（本镜头）: fully_preserved - 只保留这个人。\n<Picture 1>（第一帧）: fully_preserved - 视频从这张首帧开始。\n<Picture 2>（地点）: fully_preserved - 只用这一处场景。\n\ndetailed_description:\n9:16 单人远景。双手不进入近景。不要第二个人。\n\noverall_soundscape:\n很轻的环境声，这一镜没有台词。\n\nnon_diegetic_music:\n这一镜不加配乐。",
+      "first_frame": [
+        "1",
+        0
+      ],
+      "references": [
+        [
+          "2",
+          0
+        ],
+        [
+          "3",
+          0
+        ]
+      ]
+    },
+    "_cinecore": "video_sampler 类名需按本地 ComfyUI 节点改映射，图内不要再加别的角色"
+  },
+  "5": {
+    "class_type": "SaveVideo",
+    "inputs": {
+      "video": [
+        "4",
+        0
+      ],
+      "filename_prefix": "cinecore-video-example"
+    }
+  }
+}

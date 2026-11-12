@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/seldoms/cine-core/schemas/bible.schema.json",
+  "title": "VisualBible",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["story_id", "characters", "locations"],
+  "properties": {
+    "story_id": { "type": "string", "minLength": 1 },
+    "characters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "on_screen", "description", "wardrobe_variants"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "on_screen": { "type": "boolean" },
+          "description": { "type": "string", "minLength": 1 },
+          "wardrobe_variants": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "description"],
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "description": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "locations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "description", "time_of_day"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "time_of_day": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

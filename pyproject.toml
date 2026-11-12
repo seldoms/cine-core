@@ -1,0 +1,29 @@
+[project]
+name = "cinecore"
+version = "0.1.0"
+description = "Research core for unattended production of about-5-minute AI short films."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "cine-core contributors" }]
+dependencies = [
+  "PyYAML>=6.0.1",
+  "jsonschema>=4.21.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.2.0"]
+
+[project.scripts]
+cine = "cinecore.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

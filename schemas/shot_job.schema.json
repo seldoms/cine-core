@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/seldoms/cine-core/schemas/shot_job.schema.json",
+  "title": "ShotJob",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "job_id",
+    "run_id",
+    "story_id",
+    "shot_id",
+    "ordinal",
+    "regeneration",
+    "scene_id",
+    "action_group",
+    "frame_count",
+    "fps",
+    "width",
+    "height",
+    "takes_requested",
+    "backend",
+    "dialogue",
+    "camera",
+    "references",
+    "first_frame",
+    "character_face_token",
+    "continuation",
+    "video_prompt",
+    "workflow"
+  ],
+  "properties": {
+    "job_id": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "story_id": { "type": "string", "minLength": 1 },
+    "shot_id": { "type": "string", "minLength": 1 },
+    "ordinal": { "type": "integer", "minimum": 1 },
+    "regeneration": { "type": "integer", "minimum": 0 },
+    "scene_id": { "type": "string" },
+    "action_group": { "type": "string" },
+    "frame_count": { "type": "integer", "minimum": 90, "maximum": 260 },
+    "fps": { "const": 24 },
+    "width": { "const": 416 },
+    "height": { "const": 736 },
+    "takes_requested": { "type": "integer", "minimum": 1 },
+    "backend": { "enum": ["dry_run", "comfyui"] },
+    "dialogue": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["speaker_id", "line"],
+        "properties": {
+          "speaker_id": { "type": "string" },
+          "line": { "type": "string" }
+        }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["framing", "angle", "forbids_hand_closeup"],
+      "properties": {
+        "framing": { "type": "string" },
+        "angle": { "type": "string" },
+        "forbids_hand_closeup": { "type": "boolean" }
+      }
+    },
+    "references": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ref_id", "role", "asset_id", "version"],
+        "properties": {
+          "ref_id": { "type": "string" },
+          "role": { "enum": ["subject", "location", "wardrobe"] },
+          "asset_id": { "type": "string" },
+          "version": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "first_frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_id", "version", "width", "height", "latent_node", "approved"],
+      "properties": {
+        "asset_id": { "type": "string" },
+        "version": { "type": "integer", "minimum": 1 },
+        "width": { "const": 768 },
+        "height": { "const": 1344 },
+        "latent_node": { "const": "EmptySD3LatentImage" },
+        "approved": { "type": "boolean" }
+      }
+    },
+    "character_face_token": { "type": "string", "minLength": 1 },
+    "continuation": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "from_shot_id", "same_scene", "same_action_group"],
+          "properties": {
+            "mode": { "const": "same_action_extend" },
+            "from_shot_id": { "type": "string" },
+            "same_scene": { "type": "boolean" },
+            "same_action_group": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "video_prompt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject_definitions",
+        "summary",
+        "retention_analysis",
+        "detailed_description",
+        "overall_soundscape",
+        "non_diegetic_music"
+      ],
+      "properties": {
+        "subject_definitions": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "retention_analysis": { "type": "string", "minLength": 1 },
+        "detailed_description": { "type": "string", "minLength": 1 },
+        "overall_soundscape": { "type": "string", "minLength": 1 },
+        "non_diegetic_music": { "type": "string", "minLength": 1 }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["keyframe", "video"],
+      "properties": {
+        "keyframe": { "type": "object" },
+        "video": { "type": "object" }
+      }
+    }
+  }
+}
