@@ -5,7 +5,7 @@ from cinecore.adapt import adapt_story, assert_not_verbatim, input_kind
 from cinecore.config import load_config
 from cinecore.constants import PROMPT_SECTIONS
 from cinecore.duration import is_usable_shot
-from cinecore.im import parse_message
+from cinecore.im import handle_message, parse_message
 from cinecore.prompts import QWEN_SUFFIX
 from cinecore.schema_util import project_root, validate
 
@@ -87,6 +87,56 @@ def test_news_expansion_does_not_invent_a_real_outcome():
         assert invented not in prose
     assert not re.search(r"\d", prose)
     assert "虚构人物" in screenplay["logline"]
+    assert "一个夜里" in screenplay["logline"]
+    assert "小区停电" not in prose
+    assert all(scene["heading"].split()[1] != "日" for scene in screenplay["scenes"])
     assert storyboard["shots"][0]["video_prompt"]["non_diegetic_music"] == "N/A"
     dumped = json.dumps(screenplay["expansion"], ensure_ascii=False)
     assert "不补写输入里没有的真实姓名" in dumped
+
+
+def test_keyword_and_news_messages_enter_the_existing_chain(tmp_path):
+    from pathlib import Path
+
+    config_path = tmp_path / "expand.yaml"
+    config_path.write_text(
+        "paths:\n"
+        f"  corpus: {ROOT / 'samples' / 'corpus'}\n"
+        f"  runs: {tmp_path / 'runs'}\n"
+        f"  ledger: {tmp_path / 'ledger.json'}\n"
+        "im:\n"
+        f"  inbox: {tmp_path / 'inbox'}\n"
+        "dry_run:\n"
+        "  inject: []\n",
+        encoding="utf-8",
+    )
+    config = load_config(config_path)
+    keyword_reply = handle_message("跑 雨夜 纸船", config)
+    assert "缺口" in keyword_reply
+    assert "计划" in keyword_reply
+    assert "[summary]" in keyword_reply
+    assert "不是成片" in keyword_reply
+    news = (
+        "跑\n"
+        "标题：小区停电\n"
+        "体裁：新闻\n"
+        "正文：\n"
+        "昨晚有市民反映小区停电，具体户数和原因都没有写明。\n"
+    )
+    news_reply = handle_message(news, config)
+    assert "缺口" in news_reply
+    assert "恢复" not in news_reply.split("第 1 镜")[0]
+    runs = sorted((tmp_path / "runs").glob("run-*"))
+    assert len(runs) == 2
+    for run_dir in runs:
+        log = json.loads((run_dir / "run_log.json").read_text(encoding="utf-8"))
+        assert log["dry_run"] is True
+        assert log["status"] == "completed"
+        story = log["stories"][0]
+        assert story["status"] in {"completed", "completed_with_quarantine"}
+        board = json.loads(
+            (run_dir / "stories" / story["story_id"] / "storyboard.json").read_text(encoding="utf-8")
+        )
+        assert 270 <= board["planned_duration_sec"] <= 330
+        assert board["shots"][0]["first_frame"]["prompt"].endswith(f"{QWEN_SUFFIX}。")
+        assert list(board["shots"][0]["video_prompt"]) == list(PROMPT_SECTIONS)

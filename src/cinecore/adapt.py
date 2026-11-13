@@ -319,7 +319,7 @@ def _generic_film(item: dict) -> dict:
         name,
         "三十岁上下，黑发扎起，深色上衣，长相普通，便于以后替换静帧。",
     )
-    night = any(word in source for word in ("夜", "雨", "巷", "灯"))
+    night = any(word in source for word in ("夜", "晚", "雨", "巷", "灯"))
     location = _location(
         "plain-corner",
         "窄巷" if night else "普通街角",
@@ -327,13 +327,17 @@ def _generic_film(item: dict) -> dict:
         "night" if night else "day",
     )
     lines = _NEWS_LINES if item["source_type"] == "news" else _STORY_LINES
+    # 新闻片段不把报道里的词嵌进动作，避免看起来像已经核实的事实。
+    if item["source_type"] == "news":
+        hooks = ["这件事"]
     scenes = []
     for index, (scene_id, beat, heading, purpose) in enumerate(_BEATS):
         hook = hooks[index % len(hooks)]
+        shown = heading.replace("日 ", "夜 ") if night else heading
         scenes.append(
             {
                 "scene_id": scene_id,
-                "heading": f"{beat} {heading}",
+                "heading": f"{beat} {shown}",
                 "action": f"{name}{purpose}。这一场只碰「{hook}」。",
                 "lines": [lines[index]],
             }
@@ -348,10 +352,11 @@ def _generic_film(item: dict) -> dict:
         tone = "感人小品收成一个关系里的一件事，不写成连续剧。"
     else:
         tone = "有意思的小事停在今天，不往下写下一集。"
-    short = hooks[0]
+    short = "这件事" if item["source_type"] == "news" else hooks[0]
+    when = "一个夜里" if night else "一个白天"
     return {
         "title": f"{short}这一天",
-        "logline": f"虚构人物{name}用一个白天把「{short}」做成一件能看完的事。",
+        "logline": f"虚构人物{name}用{when}把「{short}」做成一件能看完的事。",
         "note": tone + gap_note + "时长锁在约五分钟。输入越短，补上的情节越多，但锁住的事实不改。",
         "hero": hero,
         "offscreen": [],
