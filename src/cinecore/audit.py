@@ -197,13 +197,19 @@ def audit_video(job: dict, take: dict, audit_cfg: dict) -> list[dict]:
     sections = take.get("prompt_sections") or {}
     names = [name for name in PROMPT_SECTIONS if str(sections.get(name, "")).strip()]
     summary = str(sections.get("summary", ""))
-    prompt_ok = names == list(PROMPT_SECTIONS) and summary.startswith("[") and "keyframe completion" in summary
+    detail_text = str(sections.get("detailed_description", ""))
+    prompt_ok = (
+        names == list(PROMPT_SECTIONS)
+        and summary.startswith("[")
+        and "keyframe completion" in summary
+        and "[Shot 1]" in detail_text
+    )
     _add(
         checks,
         "prompt_contract",
         prompt_ok,
         "error",
-        "视频提示必须是六段，且 summary 带 keyframe completion 前缀",
+        "视频提示必须是六段英文契约：summary 带 keyframe completion，正文含 [Shot 1]",
     )
     continuation = job.get("continuation")
     if take.get("uses_tail_frame"):

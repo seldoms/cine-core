@@ -32,12 +32,12 @@ def _job(**overrides):
         "character_face_token": "same",
         "continuation": None,
         "video_prompt": {
-            "subject_definitions": "人",
-            "summary": "[keyframe completion + reference generation] 一个人。",
+            "subject_definitions": "<Picture 1> is the first frame of [Shot 1].",
+            "summary": "[keyframe completion + reference generation] One person.",
             "retention_analysis": "fully_preserved",
-            "detailed_description": "中景",
-            "overall_soundscape": "安静",
-            "non_diegetic_music": "无",
+            "detailed_description": "[Shot 1] A medium shot.",
+            "overall_soundscape": "Quiet room tone.",
+            "non_diegetic_music": "N/A",
         },
     }
     job.update(overrides)

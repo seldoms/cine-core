@@ -18,11 +18,14 @@ from cinecore.constants import PROMPT_SECTIONS
 from cinecore.corpus import open_corpus
 from cinecore.errors import CineError
 from cinecore.pipeline import Pipeline
+from cinecore.prompts import compile_h3_from_colloquial, compile_qwen_still, render_prompt_text
 from cinecore.schema_util import dump_json
 
 _ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 _FIELD = re.compile(r"^(标题|体裁|正文|执行)\s*[:：]\s*(.*)$", re.MULTILINE)
 _VERBS = {"跑", "开跑", "做", "run"}
+_STILL_VERBS = {"生图", "照片", "出图"}
+_CLIP_VERBS = {"生视频", "视频"}
 _HELP_WORDS = {"帮助", "help", "?", "？"}
 _STATUS_WORDS = {"状态", "status"}
 _PROMPT_WORDS = {"提示", "prompt"}
@@ -47,6 +50,10 @@ HELP_TEXT = """\
 直接发一条消息就能发起任务，不用分步跑命令。回复的中心是六段提示词。
 默认 dry-run：不连 GPU，不产出成片。16GB 卡的速度限制还在。
 
+生图 雨里发呆的人
+生视频 她把灯挂上铁钩，看了一眼
+生视频 8秒 她把灯挂上铁钩
+
 跑 <已有故事id>
 跑
 标题：短标题
@@ -70,6 +77,7 @@ class Intent:
     run_id: str | None = None
     shot_id: str | None = None
     story_id: str | None = None
+    seconds: float | None = None
     title: str = ""
     source_type: str = "interesting"
     body: str = ""
@@ -106,9 +114,25 @@ def parse_message(text: str) -> Intent:
         return Intent(kind="status", run_id=rest or None)
     if verb in _PROMPT_WORDS:
         return _parse_prompt(rest)
+    if verb in _STILL_VERBS:
+        if len(rest) < 2:
+            raise CineError("生图后面写一句口水话，比如：生图 雨里发呆的人")
+        return Intent(kind="still", body=rest)
+    if verb in _CLIP_VERBS:
+        seconds, spoken = _leading_seconds(rest)
+        if len(spoken) < 2:
+            raise CineError("生视频后面写一句口水话，比如：生视频 她把灯挂上铁钩")
+        return Intent(kind="clip", body=spoken, seconds=seconds)
     if verb not in _VERBS:
         raise CineError("不认识这条指令。发「帮助」看用法。")
     return _parse_run(rest)
+
+
+def _leading_seconds(text: str) -> tuple[float | None, str]:
+    matched = re.match(r"^(\d+(?:\.\d+)?)秒\s*", text or "")
+    if not matched:
+        return None, text
+    return float(matched.group(1)), text[matched.end() :].strip()
 
 
 def _parse_prompt(rest: str) -> Intent:
@@ -202,6 +226,11 @@ def handle_message(text: str, config: dict) -> str:
     intent = parse_message(text)
     if intent.kind == "help":
         return HELP_TEXT
+    if intent.kind == "still":
+        return "Qwen-Image 静帧提示：\n" + compile_qwen_still(intent.body, kind="photo")
+    if intent.kind == "clip":
+        sections = compile_h3_from_colloquial(intent.body, intent.seconds)
+        return "MiniMax H3 视频提示：\n" + render_prompt_text(sections)
     if intent.kind == "live_refused":
         return _LIVE_NOTE
     if intent.kind == "status":

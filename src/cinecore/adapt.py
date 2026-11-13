@@ -16,8 +16,8 @@ from cinecore.prompts import build_video_prompt, still_prompt
 _SPACE = re.compile(r"\s+")
 
 _WARDROBE = [
-    {"id": "daily", "description": "日常：朴素外套，颜色压暗，没有logo。"},
-    {"id": "night", "description": "夜里：同一套衣服外加一件深色薄外套，帽檐不挡脸。"},
+    {"id": "daily", "description": "日常：素色外套，颜色压暗，布面干净。"},
+    {"id": "night", "description": "夜里：同一套衣服外加一件深色薄外套，帽檐抬起，露出眼睛。"},
 ]
 
 
@@ -76,13 +76,13 @@ _FILMS: dict[str, dict] = {
         "hero": _character(
             "chenzhou",
             "陈舟",
-            "三十岁上下，短发，瘦高，面容平静，深色外套没有花纹。",
+            "三十岁上下，短发，瘦高，面容平静，深色素面外套。",
         ),
         "offscreen": [],
         "location": _location(
             "narrow-alley",
             "窄巷尽头",
-            "石板巷，一头是铁钩，一头是台阶，夜里几乎没有路人。",
+            "石板巷，一头是铁钩，一头是台阶，夜里巷子安静。",
             "night",
         ),
         "scenes": [
@@ -125,7 +125,7 @@ _FILMS: dict[str, dict] = {
         "hero": _character(
             "linxia",
             "林夏",
-            "四十岁上下，低马尾，旧工装外套，眼神清醒，没有首饰。",
+            "四十岁上下，低马尾，旧工装外套，眼神清醒，耳际干净。",
         ),
         "offscreen": [],
         "location": _location(
@@ -174,7 +174,7 @@ _FILMS: dict[str, dict] = {
         "hero": _character(
             "zhouwan",
             "周晚",
-            "十一二岁，齐耳短发，浅灰色雨衣，脸上没有妆。",
+            "十一二岁，齐耳短发，浅灰色雨衣，素颜。",
         ),
         "offscreen": [
             _character(
@@ -187,7 +187,7 @@ _FILMS: dict[str, dict] = {
         "location": _location(
             "rain-kitchen",
             "旧楼厨房",
-            "一张木桌，一只洗衣用不了的浅水盆，窗外有雨。",
+            "一张木桌，一只浅水盆，窗外有雨。",
             "rain-day",
         ),
         "scenes": [
@@ -248,7 +248,7 @@ def _generic_film(item: dict) -> dict:
         "location": _location(
             "plain-room",
             "一间普通的房间",
-            "一张桌子，一扇窗，没有标志性建筑。",
+            "一张桌子，一扇窗，普通房间。",
             "day",
         ),
         "scenes": [
@@ -324,6 +324,7 @@ def prompt_context(bible: dict, shot: dict) -> dict:
         "location_name": location["name"],
         "location_description": location["description"],
         "wardrobe_description": wardrobe["description"],
+        "time_of_day": location["time_of_day"],
     }
 
 
@@ -352,6 +353,7 @@ def adapt_story(item: dict, duration_cfg: dict, *, backend: str = "rule") -> tup
         "location_name": location["name"],
         "location_description": location["description"],
         "wardrobe_description": wardrobe["description"],
+        "time_of_day": location["time_of_day"],
     }
     scene_index = _scene_indexes(len(frames))
     subject_ref = f"char-{hero['id']}-still-{wardrobe_id}"
