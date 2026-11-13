@@ -12,6 +12,7 @@ from cinecore.adapt import adapt_story, assert_not_verbatim
 from cinecore.config import load_config, load_dotenv, resolve_config_path
 from cinecore.corpus import ingest_directory, open_corpus
 from cinecore.errors import CineError
+from cinecore.im import handle_message, serve
 from cinecore.pipeline import Pipeline
 from cinecore.schema_util import dump_json, validate
 
@@ -62,6 +63,15 @@ def _parser() -> argparse.ArgumentParser:
         help="汇总审核报告。退出码 0 只表示汇总写完，不代表镜头通过。",
     )
     audit.add_argument("--run-dir", required=True)
+
+    task = sub.add_parser("task", help="用一条消息发起任务。回复的中心是六段提示词。")
+    task.add_argument("--text", default=None, help="消息正文。不传则从标准输入读。")
+    task.add_argument("--config", default=None)
+
+    server = sub.add_parser("serve", help="本机 HTTP，供即时通讯机器人发起任务。只做 dry-run。")
+    server.add_argument("--host", default=None)
+    server.add_argument("--port", type=int, default=None)
+    server.add_argument("--config", default=None)
     return parser
 
 
@@ -196,6 +206,22 @@ def _cmd_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load(args: argparse.Namespace) -> dict:
+    load_dotenv()
+    return load_config(resolve_config_path(args.config))
+
+
+def _cmd_task(args: argparse.Namespace) -> int:
+    text = args.text if args.text is not None else sys.stdin.read()
+    print(handle_message(text, _load(args)))
+    return 0
+
+
+def _cmd_serve(args: argparse.Namespace) -> int:
+    serve(_load(args), host=args.host, port=args.port)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     commands = {
@@ -204,6 +230,8 @@ def main(argv: list[str] | None = None) -> int:
         "run": _cmd_run,
         "status": _cmd_status,
         "audit": _cmd_audit,
+        "task": _cmd_task,
+        "serve": _cmd_serve,
     }
     try:
         return commands[args.command](args)

@@ -52,6 +52,7 @@ class Pipeline:
         supervise_block: bool = False,
         stop_after_completed_shots: int | None = None,
         fail_story_ids: set[str] | None = None,
+        only_story_ids: set[str] | None = None,
     ):
         self.config = config
         self.source = source
@@ -61,6 +62,7 @@ class Pipeline:
         self.supervise_block = supervise_block
         self.stop_after_completed_shots = stop_after_completed_shots
         self.fail_story_ids = fail_story_ids or set()
+        self.only_story_ids = only_story_ids
         self._done_this_call = 0
         if resume:
             self.store = RunStore.open(run_dir)
@@ -117,6 +119,11 @@ class Pipeline:
         items = corpus.list_items()
         done = set(self.store.state["completed_story_ids"])
         pending = [item for item in items if item["id"] not in done]
+        if self.only_story_ids is not None:
+            missing = sorted(self.only_story_ids.difference(item["id"] for item in items))
+            if missing:
+                raise CineError("语料里没有：" + "、".join(missing))
+            pending = [item for item in pending if item["id"] in self.only_story_ids]
         if not self.requeue:
             pending = [item for item in pending if not self.ledger.is_blocked(item["id"])]
         if self.limit is not None:

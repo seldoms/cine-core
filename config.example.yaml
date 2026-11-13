@@ -9,6 +9,13 @@ paths:
   runs: runs
   ledger: data/ledger.json
 
+im:
+  # cine serve 默认只听本机。空 token 不要暴露到公网。
+  host: 127.0.0.1
+  port: 8787
+  token: ""
+  inbox: data/im-inbox
+
 adapt:
   # rule：v0 自带的规则改编器，不调用云端模型。
   # llm：预留名，未配置时会明确失败，而不是偷偷请求网络。

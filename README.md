@@ -77,6 +77,28 @@ cine run --resume runs/<run_id> --dry-run --source samples/corpus
 
 第一次 dry-run 之后，故事会记进 `data/ledger.json`，下次默认跳过。再跑加 `--requeue`。
 
+## 从即时消息发起
+
+分步的 `ingest` / `plan` / `run` 还在，但发起一条任务不必走它们。聊天工具把用户原文 POST 到本机，回复的中心是六段提示词。细节在 [docs/im.md](docs/im.md)。
+
+```bash
+cine serve --config config.example.yaml
+```
+
+```bash
+curl -s http://127.0.0.1:8787/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"跑 sample-paper-boat"}'
+```
+
+没有机器人时也可以：
+
+```bash
+cine task --config config.example.yaml --text '跑 sample-paper-boat'
+```
+
+这条入口固定 dry-run。真卡要跑数小时，不能挂在一条聊天连接上；换了入口也不会让 16GB 卡变快。
+
 示例语料是为本仓库写的虚构文本。`sample-market-rain` 的体裁是 `news`，但正文不是真实报道，改编器也不会把它当口播念出来。
 
 ## 以后接到本地 ComfyUI
@@ -93,7 +115,7 @@ v0 **不会**因为你填了主机就开始向 ComfyUI 提交整夜任务。这�
 pytest
 ```
 
-GitHub Actions 里也只跑测试。覆盖时长网格、审核和隔离策略、schema、示例语料的 dry-run，以及中断后续跑。
+GitHub Actions 里也只跑测试。覆盖时长网格、审核和隔离策略、schema、示例语料的 dry-run、中断后续跑，以及即时消息发起任务。
 
 ## 许可
 

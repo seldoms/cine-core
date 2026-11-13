@@ -31,6 +31,12 @@ DEFAULTS: dict = {
         "runs": "runs",
         "ledger": "data/ledger.json",
     },
+    "im": {
+        "host": "127.0.0.1",
+        "port": 8787,
+        "token": "",
+        "inbox": "data/im-inbox",
+    },
     "adapt": {"backend": "rule"},
     "autonomy": {
         "mode": "unattended",
@@ -114,6 +120,9 @@ def load_config(path: Path | None = None) -> dict:
     host = os.environ.get("CINE_COMFYUI_HOST")
     if host:
         config["comfyui"]["host"] = host
+    token = os.environ.get("CINE_IM_TOKEN")
+    if token:
+        config["im"]["token"] = token
     mode = config["autonomy"]["mode"]
     if mode not in {"unattended", "supervised"}:
         raise CineError(f"未知的自主模式：{mode}")
