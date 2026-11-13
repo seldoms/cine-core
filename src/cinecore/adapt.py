@@ -226,63 +226,138 @@ _FILMS: dict[str, dict] = {
 }
 
 
+_NAMES = ("江禾", "宋晚", "许宁")
+_BEATS = (
+    ("sc1", "开场", "日 内 桌边", "把由头放在桌上，先看清今天只做这一件"),
+    ("sc2", "触发", "日 内 门口", "一件具体的小事打断准备，人决定出门"),
+    ("sc3", "发展", "日 外 街角", "独自把这件事做完一段，四周只有这一处地方"),
+    ("sc4", "转折", "傍晚 外 街角", "留下一样东西，带走一样东西"),
+    ("sc5", "收束", "夜 内 桌边", "回到桌边，这件事在今天结束"),
+)
+_NEWS_LINES = (
+    "我只处理眼前能看见的这一件。",
+    "缺的部分我空着。",
+    "名字是我自己起的。",
+    "今天就走到这里。",
+    "到今天为止。",
+)
+_STORY_LINES = (
+    "我今天把这一件做完。",
+    "那我现在就去。",
+    "先走完这一段。",
+    "这个留下。",
+    "到今天为止。",
+)
+
+
+def classify_source(text: str, explicit: str | None = None) -> str:
+    if explicit in {"news", "touching", "interesting"}:
+        return explicit
+    blob = text or ""
+    if any(word in blob for word in ("新闻", "报道", "通报", "市民反映", "停电", "事故")):
+        return "news"
+    if any(word in blob for word in ("爷爷", "奶奶", "孩子", "纸船", "感动", "病")):
+        return "touching"
+    return "interesting"
+
+
+def input_kind(text: str) -> str:
+    parts = [part for part in re.split(r"[\s，。！？；、,]+", (text or "").strip()) if part]
+    if any(len(part) > 8 for part in parts):
+        return "paragraph"
+    if len("".join(parts)) > 16 and len(parts) > 4:
+        return "paragraph"
+    return "keywords"
+
+
+def content_hooks(text: str) -> list[str]:
+    parts = re.split(r"[\s，。！？；、,]+", (text or "").strip())
+    hooks: list[str] = []
+    for part in parts:
+        part = part.strip()
+        if 2 <= len(part) <= 8 and part not in hooks:
+            hooks.append(part)
+    return hooks[:6]
+
+
+def news_gaps(text: str) -> list[str]:
+    gaps = ["人物用虚构名，不对应输入里没有点名的真实个人"]
+    if not re.search(r"\d", text or ""):
+        gaps.append("输入没有可核对的数字，成片不写户数、金额、比例或伤亡")
+    if not any(word in (text or "") for word in ("恢复", "逮捕", "死亡", "获救", "赔偿", "结案", "查明")):
+        gaps.append("输入没有写明事件结果，成片不替它收场")
+    if not any(word in (text or "") for word in ("局", "公司", "医院", "学校", "政府")):
+        gaps.append("输入没有可核对的机构，成片不写成某个真实单位的报道")
+    return gaps
+
+
+def expansion_record(item: dict, kind: str) -> dict:
+    locked = ["时长锁在约五分钟", "一部短片，不写成连续剧", "单人入画"]
+    gaps: list[str] = []
+    if item["source_type"] == "news":
+        locked.append("不补写输入里没有的真实姓名、机构、事件结果和数字")
+        gaps = news_gaps(item.get("raw_text", ""))
+    elif kind == "keywords":
+        gaps.append("关键词之间的过程和动机是补出来的情节，输入本身没有写")
+    return {
+        "input_kind": kind,
+        "target_seconds": 300,
+        "genre_boundary": "约五分钟的一部短片，不写成连续剧，也不写成十二分钟的戏",
+        "locked": locked,
+        "gaps": gaps,
+        "fictionalized": True,
+    }
+
+
 def _generic_film(item: dict) -> dict:
-    title = item["title"]
-    short = title if len(title) < 12 else title[:8]
+    kind = input_kind(item.get("raw_text") or item.get("title") or "")
+    source = item.get("raw_text") or item.get("title") or ""
+    hooks = content_hooks(source) or content_hooks(item.get("title", "")) or ["这件事"]
+    name = _NAMES[sum(item["id"].encode("utf-8")) % len(_NAMES)]
     hero = _character(
         "lead",
-        "江禾",
+        name,
         "三十岁上下，黑发扎起，深色上衣，长相普通，便于以后替换静帧。",
     )
-    tone = {
-        "news": "这条素材是新闻体裁。成片只取一个人的当天行动，不念稿。",
-        "touching": "这条素材是动人体裁。成片收在一个关系上，不写成连续剧。",
-        "interesting": "这条素材是奇闻体裁。成片停在一个夜里能结束的事件上。",
-    }[item["source_type"]]
+    night = any(word in source for word in ("夜", "雨", "巷", "灯"))
+    location = _location(
+        "plain-corner",
+        "窄巷" if night else "普通街角",
+        "石板和一处能站人的空地" if night else "一处普通的街角，地面和墙面清楚",
+        "night" if night else "day",
+    )
+    lines = _NEWS_LINES if item["source_type"] == "news" else _STORY_LINES
+    scenes = []
+    for index, (scene_id, beat, heading, purpose) in enumerate(_BEATS):
+        hook = hooks[index % len(hooks)]
+        scenes.append(
+            {
+                "scene_id": scene_id,
+                "heading": f"{beat} {heading}",
+                "action": f"{name}{purpose}。这一场只碰「{hook}」。",
+                "lines": [lines[index]],
+            }
+        )
+    expansion = expansion_record(item, kind)
+    gap_note = ""
+    if expansion["gaps"]:
+        gap_note = "缺口：" + "；".join(expansion["gaps"]) + "。"
+    if item["source_type"] == "news":
+        tone = "社会新闻只作由头。人物、机构和结果按缺口虚拟化，不写成已经发生的报道。"
+    elif item["source_type"] == "touching":
+        tone = "感人小品收成一个关系里的一件事，不写成连续剧。"
+    else:
+        tone = "有意思的小事停在今天，不往下写下一集。"
+    short = hooks[0]
     return {
-        "title": f"{short}的一天",
-        "logline": f"江禾用一个下午把「{short}」做成一件当天能结束的事。",
-        "note": tone + " v0 规则改编器只按标题和体裁铺五分钟节拍，不粘贴正文。",
+        "title": f"{short}这一天",
+        "logline": f"虚构人物{name}用一个白天把「{short}」做成一件能看完的事。",
+        "note": tone + gap_note + "时长锁在约五分钟。输入越短，补上的情节越多，但锁住的事实不改。",
         "hero": hero,
         "offscreen": [],
-        "location": _location(
-            "plain-room",
-            "一间普通的房间",
-            "一张桌子，一扇窗，普通房间。",
-            "day",
-        ),
-        "scenes": [
-            {
-                "scene_id": "sc1",
-                "heading": "日 内 房间",
-                "action": f"江禾在桌前准备，今天只处理「{short}」这一件事。",
-                "lines": ["我今天把这件事做完。"],
-            },
-            {
-                "scene_id": "sc2",
-                "heading": "日 内 门口",
-                "action": "一件小事打断了准备。江禾停下手里的东西，决定出门。",
-                "lines": ["那我现在就去。"],
-            },
-            {
-                "scene_id": "sc3",
-                "heading": "日 外 街道",
-                "action": "江禾独自走在街上，事情比预想的多绕了一点，人仍然只有一个。",
-                "lines": ["先走完这一段。"],
-            },
-            {
-                "scene_id": "sc4",
-                "heading": "傍晚 外 街道",
-                "action": "选择的代价出现了：江禾把原来想带走的东西留下。",
-                "lines": ["这个留下。"],
-            },
-            {
-                "scene_id": "sc5",
-                "heading": "夜 内 房间",
-                "action": "江禾回到房间，把灯关掉。这件事在今天结束，没有下一集。",
-                "lines": ["到今天为止。"],
-            },
-        ],
+        "location": location,
+        "scenes": scenes,
+        "expansion": expansion,
     }
 
 
@@ -460,6 +535,15 @@ def adapt_story(item: dict, duration_cfg: dict, *, backend: str = "rule") -> tup
         "logline": film["logline"],
         "adapter": "rule-v0",
         "adaptation_note": note,
+        "expansion": film.get("expansion")
+        or {
+            "input_kind": "prepared",
+            "target_seconds": 300,
+            "genre_boundary": "约五分钟的一部短片，不写成连续剧",
+            "locked": ["时长约五分钟", "单人入画", "不逐字复述原文"],
+            "gaps": [],
+            "fictionalized": True,
+        },
         "target_duration_sec": float(duration_cfg.get("target_seconds", 300)),
         "scenes": [
             {

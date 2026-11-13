@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from cinecore.adapt import classify_source
 from cinecore.constants import PROMPT_SECTIONS
 from cinecore.corpus import open_corpus
 from cinecore.errors import CineError
@@ -160,27 +161,36 @@ def _parse_run(rest: str) -> Intent:
     if form is None and _ID.match(rest) and "\n" not in rest:
         return Intent(kind="run_existing", story_id=rest, asked_live=False)
     if form is None:
-        if len(rest) < 20:
-            raise CineError("正文太短。至少写 20 个字，说明这段文字你有权拿来改编。")
+        if len(re.sub(r"\s+", "", rest)) < 2:
+            raise CineError("再给几个关键词，或一段话。")
         title = rest.splitlines()[0].strip()
         if len(title) > 24:
             title = title[:12]
-        return Intent(kind="run_new", title=title or "未命名", body=rest, asked_live=False)
+        return Intent(
+            kind="run_new",
+            title=title or "未命名",
+            source_type=classify_source(rest),
+            body=rest,
+            asked_live=False,
+        )
     if form["live"] and not form["body"] and not form["story_id"]:
         return Intent(kind="live_refused", asked_live=True)
     if form["story_id"] and not form["body"]:
         return Intent(kind="run_existing", story_id=form["story_id"], asked_live=form["live"])
-    genre = form["genre"] or "有趣"
-    if genre not in _GENRES:
-        raise CineError("体裁只能是新闻、感人、有趣。")
     body = form["body"]
-    if len(body) < 20:
-        raise CineError("正文太短。至少写 20 个字，说明这段文字你有权拿来改编。")
+    if len(re.sub(r"\s+", "", body)) < 2:
+        raise CineError("再给几个关键词，或一段话。")
+    if form["genre"]:
+        if form["genre"] not in _GENRES:
+            raise CineError("体裁只能是新闻、感人、有趣。")
+        source_type = _GENRES[form["genre"]]
+    else:
+        source_type = classify_source(body)
     title = form["title"] or body.splitlines()[0].strip()[:12]
     return Intent(
         kind="run_new",
         title=title,
-        source_type=_GENRES[genre],
+        source_type=source_type,
         body=body,
         asked_live=form["live"],
     )
@@ -347,8 +357,11 @@ def _format_start(run_dir: Path, story_id: str) -> str:
     screenplay = json.loads((run_dir / "stories" / story_id / "screenplay.json").read_text(encoding="utf-8"))
     board = json.loads(board_path.read_text(encoding="utf-8"))
     first = board["shots"][0]
+    gaps = (screenplay.get("expansion") or {}).get("gaps") or []
+    gap_line = "缺口：" + "；".join(gaps) if gaps else ""
     header = "\n".join(
-        [
+        line
+        for line in [
             "任务已发起。这是 dry-run：下面是提示词，不是成片。卡的速度不会因为从聊天发起就变快。",
             f"运行 {run_dir.name}",
             f"故事 {story_id}",
@@ -356,12 +369,14 @@ def _format_start(run_dir: Path, story_id: str) -> str:
             f"一句话 {screenplay['logline']}",
             f"计划 {board['planned_duration_sec']:.0f} 秒，{board['shot_count']} 镜。",
             f"结果 {story['status']}，通过 {story['accepted_shots']}，隔离 {story['quarantined_shots']}。",
+            gap_line,
             "",
             "第 1 镜六段提示：",
             format_shot_prompt(first),
             "",
             "看别的镜头：提示 s002",
         ]
+        if line != ""
     )
     return header
 

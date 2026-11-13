@@ -4,7 +4,7 @@
 
 ## 这是什么
 
-这个项目要做的事，是让生图和生视频变简单：嘴里一句口水话，出去就是 Qwen-Image 和 MiniMax H3 各自认的提示词，用来做照片或者一条短片。生图走 Qwen-Image 的官方改写规则，生视频走 H3 Ref2VA 的六段规则。分镜前的定妆、空镜、打戏因果和说话前中后的表演，来自 [director-skills](https://github.com/kangarooking/director-skills)（MIT）的方法，只作为上游，最后仍收成这两种格式。细节在 [docs/prompt-contracts.md](docs/prompt-contracts.md)。卡的速度仍然有限，提示词才是这里要维护的核心。
+这个项目要做的事，是让生图和生视频变简单：嘴里一句口水话，出去就是 Qwen-Image 和 MiniMax H3 各自认的提示词，用来做照片或者一条短片。生图走 Qwen-Image 的官方改写规则，生视频走 H3 Ref2VA 的六段规则。分镜前的定妆、空镜、打戏因果和说话前中后的表演，来自 [director-skills](https://github.com/kangarooking/director-skills)（MIT）的方法，只作为上游，最后仍收成这两种格式。细节在 [docs/prompt-contracts.md](docs/prompt-contracts.md)。卡的速度仍然有限，提示词才是这里要维护的核心。几个关键词或一段话会先扩成约五分钟的剧本和分镜，再进这套提示词；社会新闻缺的姓名、机构、结果和数字会标成缺口，不用补写冒充已发生的事实。
 
 它也是 **24 小时无人值守地生产大约 5 分钟 AI 短片** 的研究内核。
 

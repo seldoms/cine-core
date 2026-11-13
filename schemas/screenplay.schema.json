@@ -12,6 +12,7 @@
     "logline",
     "adapter",
     "adaptation_note",
+    "expansion",
     "target_duration_sec",
     "scenes"
   ],
@@ -23,6 +24,19 @@
     "logline": { "type": "string", "minLength": 1 },
     "adapter": { "type": "string", "minLength": 1 },
     "adaptation_note": { "type": "string", "minLength": 1 },
+    "expansion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_kind", "target_seconds", "genre_boundary", "locked", "gaps", "fictionalized"],
+      "properties": {
+        "input_kind": { "enum": ["keywords", "paragraph", "prepared"] },
+        "target_seconds": { "const": 300 },
+        "genre_boundary": { "type": "string", "minLength": 1 },
+        "locked": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "gaps": { "type": "array", "items": { "type": "string" } },
+        "fictionalized": { "type": "boolean" }
+      }
+    },
     "target_duration_sec": { "type": "number", "exclusiveMinimum": 0 },
     "scenes": {
       "type": "array",
