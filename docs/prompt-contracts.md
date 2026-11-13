@@ -1,6 +1,14 @@
 # 提示词
 
-这个仓库把口水话收成两家官方模型认的提示。规则来自公开的提示词指南，示例句子是我们自己写的，不搬官方样例。
+这个仓库把口水话收成两家官方模型认的提示。上游可以先按导演方法组织内容，最终格式只有两种：Qwen-Image 静帧一段，MiniMax H3 Ref2VA 六段。不另开一条提示词管道，也不把上游 skill 的示例文案或 `--ar` 后缀原样交出去。
+
+上游方法来自 [director-skills](https://github.com/kangarooking/director-skills)（MIT）：
+
+- [cinematic-asset-prompts](https://github.com/kangarooking/director-skills/tree/main/cinematic-asset-prompts)：分镜前先定全片影调和色彩，再写角色定妆、空镜、道具。定妆是全身站立、正面、表情平稳；空镜用「无人的街道」或「空着的房间」这种正面说法。这些句子再收成下面的 Qwen 格式。
+- [action-fight-prompt](https://github.com/kangarooking/director-skills/tree/main/action-fight-prompt)：有打戏时，一镜只留一组主动作，写成「来力 → 借势 → 一击 → 尘土反馈」，外形锁定在 `<Subject 1>`。不输出 4–15 秒的中文时间戳长提示。时长仍是这一镜的 `17n+5`。
+- [emotion-performance-director](https://github.com/kangarooking/director-skills/tree/main/emotion-performance-director)：有对白时，在 H3 正文里写说话前、说话中、说话后能看见的动作。不堆抽象情绪词。目光默认落在镜头旁边，不看镜头。对白原文仍放在 `<d>[Chinese]` 里。
+
+规则来自公开的提示词指南，示例句子是我们自己写的，不搬官方样例。
 
 ## 静帧：Qwen-Image
 

@@ -11,7 +11,7 @@ import re
 from cinecore.constants import FPS, LATENT_NODE, STILL_HEIGHT, STILL_WIDTH
 from cinecore.duration import grid_n, plan_shot_frames, seconds_for_frames
 from cinecore.errors import CineError, VerbatimOverlap
-from cinecore.prompts import build_video_prompt, still_prompt
+from cinecore.prompts import build_video_prompt, compile_qwen_still, derive_look, still_prompt
 
 _SPACE = re.compile(r"\s+")
 
@@ -308,6 +308,24 @@ def _scene_indexes(shot_count: int, scene_count: int = 5) -> list[int]:
     return indexes
 
 
+def _prop_for(blob: str, look: dict) -> dict | None:
+    if "灯" in blob:
+        spec = ("lamp", "一盏灯", "深色金属灯壳，玻璃罩，提手")
+    elif "舟" in blob or "船" in blob:
+        spec = ("paper-boat", "一只纸船", "旧报纸折成的小舟，折痕清楚")
+    elif "筐" in blob:
+        spec = ("basket", "一只竹筐", "竹筐，提手，筐底有压过的使用痕迹")
+    else:
+        return None
+    prop_id, name, description = spec
+    return {
+        "id": prop_id,
+        "name": name,
+        "description": description,
+        "still_prompt": compile_qwen_still(f"{name}，{description}", kind="prop", look=look),
+    }
+
+
 def _wardrobe_for(time_of_day: str) -> str:
     if time_of_day in {"night", "dusk"}:
         return "night"
@@ -325,6 +343,7 @@ def prompt_context(bible: dict, shot: dict) -> dict:
         "location_description": location["description"],
         "wardrobe_description": wardrobe["description"],
         "time_of_day": location["time_of_day"],
+        "look": bible.get("look"),
     }
 
 
@@ -354,6 +373,7 @@ def adapt_story(item: dict, duration_cfg: dict, *, backend: str = "rule") -> tup
         "location_description": location["description"],
         "wardrobe_description": wardrobe["description"],
         "time_of_day": location["time_of_day"],
+        "look": derive_look(item["source_type"], item.get("title", "") + item.get("raw_text", "")),
     }
     scene_index = _scene_indexes(len(frames))
     subject_ref = f"char-{hero['id']}-still-{wardrobe_id}"
@@ -417,6 +437,7 @@ def adapt_story(item: dict, duration_cfg: dict, *, backend: str = "rule") -> tup
                 "prompt": still_prompt(
                     kind="首帧",
                     text=f"{hero['name']}，{wardrobe['description']} 地点{location['name']}，{framing}",
+                    look=context["look"],
                 ),
             },
             "video_prompt": {},
@@ -450,10 +471,14 @@ def adapt_story(item: dict, duration_cfg: dict, *, backend: str = "rule") -> tup
             for scene in film["scenes"]
         ],
     }
+    look = context["look"]
+    prop = _prop_for(" ".join(scene["action"] for scene in film["scenes"]) + film["title"], look)
     bible = {
         "story_id": item["id"],
+        "look": {key: look[key] for key in ("tone", "light", "palette")},
         "characters": [hero, *film["offscreen"]],
         "locations": [location],
+        "props": [prop] if prop else [],
     }
     planned = round(sum(shot["duration_sec"] for shot in shots), 5)
     storyboard = {
@@ -482,6 +507,7 @@ def regenerate_shot(shot: dict, checks: list[dict], context: dict) -> dict:
     updated["first_frame"]["prompt"] = still_prompt(
         kind="首帧重拍",
         text=f"{context['character_name']} 远景，{context['wardrobe_description']} 地点{context['location_name']}",
+        look=context.get("look"),
     )
     updated["video_prompt"] = build_video_prompt(updated, context)
     return updated

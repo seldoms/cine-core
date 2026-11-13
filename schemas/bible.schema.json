@@ -4,9 +4,33 @@
   "title": "VisualBible",
   "type": "object",
   "additionalProperties": false,
-  "required": ["story_id", "characters", "locations"],
+  "required": ["story_id", "look", "characters", "locations", "props"],
   "properties": {
     "story_id": { "type": "string", "minLength": 1 },
+    "look": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tone", "light", "palette"],
+      "properties": {
+        "tone": { "type": "string", "minLength": 1 },
+        "light": { "type": "string", "minLength": 1 },
+        "palette": { "type": "string", "minLength": 1 }
+      }
+    },
+    "props": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "description", "still_prompt"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "still_prompt": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     "characters": {
       "type": "array",
       "minItems": 1,

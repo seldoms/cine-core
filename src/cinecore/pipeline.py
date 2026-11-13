@@ -279,6 +279,7 @@ class Pipeline:
                 prompt = still_prompt(
                     kind="角色静帧",
                     text=f"{character['name']}。{character['description']} {variant['description']}",
+                    look=bible.get("look"),
                 )
                 token = face_token(character["id"], 1)
                 still = self.backend.render_still(
@@ -307,7 +308,11 @@ class Pipeline:
             dependents = [
                 shot["shot_id"] for shot in storyboard["shots"] if shot["location_id"] == location["id"]
             ]
-            prompt = still_prompt(kind="场景静帧", text=f"{location['name']}。{location['description']}")
+            prompt = still_prompt(
+                kind="场景静帧",
+                text=f"{location['name']}。{location['description']}",
+                look=bible.get("look"),
+            )
             still = self.backend.render_still(
                 {
                     "asset_id": asset_id,

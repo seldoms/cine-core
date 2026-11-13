@@ -10,6 +10,64 @@ from cinecore.prompts import (
 )
 
 
+def test_empty_place_is_a_positive_qwen_still():
+    from cinecore.prompts import derive_look
+
+    look = derive_look("interesting", "夜里的窄巷")
+    prompt = compile_qwen_still("一条夜里的窄巷，石板和一枚铁钩", kind="location", look=look)
+    assert "无人的街道" in prompt
+    assert prompt.endswith(f"{QWEN_SUFFIX}。")
+    assert "--ar" not in prompt
+    assert not re.search(r"[不没别勿]|禁止", prompt)
+    assert look["palette"] in prompt
+
+
+def test_fight_becomes_one_causal_beat_inside_h3():
+    sections = compile_h3_from_colloquial("他挥拳打来，她侧身躲开，尘土扬起", seconds=5.17)
+    detail = sections["detailed_description"]
+    assert list(sections) == list(PROMPT_SECTIONS)
+    assert "incoming force arrives first" in detail
+    assert "One strike then travels" in detail
+    assert "Dust lifts" in detail
+    assert "0:00" not in detail
+    assert "0：00" not in detail
+    assert "<Picture 2>" not in sections["subject_definitions"]
+    assert sections["non_diegetic_music"] == "N/A"
+
+
+def test_performance_is_visible_before_during_and_after_the_line():
+    sections = compile_h3_from_colloquial("她压低声音说「到此为止」。", seconds=5.17)
+    detail = sections["detailed_description"]
+    assert "Before speaking" in detail
+    assert "While speaking" in detail
+    assert "After speaking" in detail
+    assert "<d>[Chinese] 到此为止</d>" in detail
+    assert "beside the lens" in detail
+    assert "looking at the camera" not in detail.lower()
+    assert "angry" not in detail.lower()
+    assert "sad" not in detail.lower()
+
+
+def test_story_assets_use_the_same_compiler():
+    from cinecore.adapt import adapt_story
+    from cinecore.config import load_config
+    from cinecore.corpus import FilesystemCorpus
+    from cinecore.schema_util import project_root
+
+    root = project_root()
+    item = FilesystemCorpus(root / "samples" / "corpus").get("sample-last-lantern")
+    _screenplay, bible, storyboard = adapt_story(item, load_config(root / "config.example.yaml")["duration"])
+    assert bible["look"]["palette"]
+    assert bible["props"][0]["id"] == "lamp"
+    assert bible["props"][0]["still_prompt"].endswith(f"{QWEN_SUFFIX}。")
+    assert "--ar" not in bible["props"][0]["still_prompt"]
+    spoken = next(shot for shot in storyboard["shots"] if shot["dialogue"])
+    detail = spoken["video_prompt"]["detailed_description"]
+    assert "Before speaking" in detail
+    assert "<d>[Chinese]" in detail
+    assert spoken["video_prompt"]["summary"].startswith("[")
+
+
 def test_qwen_still_expands_colloquial_speech_without_negation():
     prompt = compile_qwen_still("不要路人，雨里发呆的短发女人", kind="photo")
     assert prompt.endswith(f"{QWEN_SUFFIX}。")

@@ -65,39 +65,103 @@ def _framing_of(text: str, default: str = "中景") -> str:
     return default
 
 
-def compile_qwen_still(text: str, *, kind: str = "photo") -> str:
-    """一句口水话，或一段已有描述，收成一条 Qwen-Image 静帧提示。"""
+def derive_look(source_type: str, text: str = "") -> dict[str, str]:
+    """分镜前先定一套全片共用的影调和色彩。三档是本仓库自己的对应，不是照搬示例文案。"""
+    blob = text or ""
+    if any(word in blob for word in ("夜", "巷", "灯")) and source_type == "interesting":
+        key = "interesting"
+    else:
+        key = source_type if source_type in {"news", "touching", "interesting"} else "interesting"
+    table = {
+        "news": {
+            "tone": "纪实摄影，日光平实",
+            "light": "一侧的散射日光",
+            "palette": "灰绿和暗赭",
+            "light_en": "flat daylight from one side",
+            "palette_en": "muted gray-green and dull ochre",
+        },
+        "touching": {
+            "tone": "室内写实，安静",
+            "light": "窗边的柔光",
+            "palette": "暖木色和浅灰",
+            "light_en": "soft window light",
+            "palette_en": "warm wood and pale gray",
+        },
+        "interesting": {
+            "tone": "夜街写实",
+            "light": "一盏实用灯和深影",
+            "palette": "蓝黑底色和一小块暖光",
+            "light_en": "one practical lamp and deep shadow",
+            "palette_en": "blue-black with a small warm lamp",
+        },
+    }
+    return table[key]
+
+
+def infer_still_kind(text: str) -> str:
+    person = any(word in text for word in ("女", "男", "她", "他", "孩", "人"))
+    if any(word in text for word in ("道具", "灯", "船", "筐")) and not person:
+        return "prop"
+    if any(word in text for word in ("街", "巷", "房", "室", "厨", "空镜", "场地")) and not person:
+        return "location"
+    return "photo"
+
+
+def _empty_place(text: str) -> str:
+    if any(word in text for word in ("房", "室", "厨", "桌")):
+        return "空着的房间"
+    return "无人的街道"
+
+
+def compile_qwen_still(text: str, *, kind: str = "photo", look: dict | None = None) -> str:
+    """一句口水话，或一段已有描述，收成一条 Qwen-Image 静帧提示。
+
+    角色、空镜、道具先按资产圣经的方法组织（全身站立、空场景、单独物件、全片同一套色彩），
+    再收成 Qwen 要求的一段肯定句。不写 `--ar`，不写像素。
+    """
     kept = positive_clauses(text)
     if not kept:
         kept = "一位成年人站在真实环境里，神情自然，衣服素净"
+    tone = (look or {}).get("tone") or "纪实摄影风格"
+    light = (look or {}).get("light") or "柔和的侧光"
+    palette = (look or {}).get("palette") or "压暗的自然色"
     framing = _framing_of(text)
     if kind == "location":
         body = (
-            f"纪实摄影风格，环境照片。{kept}。"
-            "地面、墙面和主要器物的材质清楚，光线来自画面一侧，色调真实。"
+            f"{tone}，{palette}，{light}。{kept}。"
+            f"这是{_empty_place(text)}，广角能看见地面和墙面的全貌，材质清楚。"
+        )
+    elif kind == "prop":
+        body = (
+            f"{tone}，{palette}，{light}。单独陈列的物件：{kept}。"
+            "正面摆放，背景是均匀的浅灰，边缘有细微的使用痕迹。"
         )
     elif kind == "keyframe":
         body = (
-            f"纪实摄影风格，{_FRAMING_ZH[framing]}。{kept}。"
-            "双手垂在身侧，脸和身体是焦点，环境留在身后。柔和的自然光。"
+            f"{tone}，{palette}，{light}。{_FRAMING_ZH[framing]}。{kept}。"
+            "双手垂在身侧，脸和身体是焦点，环境留在身后。"
         )
     else:
         body = (
-            f"纪实摄影风格，{_FRAMING_ZH.get(framing, _FRAMING_ZH['近景'])}。画面中心是{kept}。"
-            "目光稳定，表情自然，姿态放松，双手垂在身侧，脸处于焦点。"
-            "背景是平整的深灰墙，侧光柔和，色彩压暗。"
+            f"{tone}，{palette}，{light}。{kept}。"
+            "全身站立，正面朝向，表情平稳，双臂垂在身侧。背景是均匀的浅灰墙。"
         )
-    return _one_line(f"{body}{QWEN_SUFFIX}。")
+    prompt = _one_line(f"{body}{QWEN_SUFFIX}。")
+    if "--ar" in prompt or _NEGATION.search(prompt):
+        raise ValueError("Qwen 静帧提示含有否定词或 Midjourney 画幅后缀")
+    return prompt
 
 
-def still_prompt(*, kind: str, text: str) -> str:
-    if "场景" in kind:
+def still_prompt(*, kind: str, text: str, look: dict | None = None) -> str:
+    if "道具" in kind:
+        mode = "prop"
+    elif "场景" in kind:
         mode = "location"
     elif "首帧" in kind:
         mode = "keyframe"
     else:
         mode = "character"
-    return compile_qwen_still(text, kind=mode)
+    return compile_qwen_still(text, kind=mode, look=look)
 
 
 def _task_prefix(shot: dict) -> str:
@@ -143,6 +207,42 @@ _PHRASES = (
     ("普通房间", "an ordinary room"),
     ("一扇窗", "a window"),
 )
+
+
+_FIGHT_WORDS = ("挥拳", "对打", "格斗", "搏斗", "出手", "打来", "一拳", "踢", "砍")
+
+
+def is_fight(text: str) -> bool:
+    return any(word in (text or "") for word in _FIGHT_WORDS)
+
+
+def fight_sentence(seconds: float) -> str:
+    """打戏只留一组主动作，写成因果链，并给出一处环境反馈。时长仍是这一镜的网格秒数。"""
+    return (
+        f"Across this single {seconds:.2f}-second shot, one causal chain plays out. "
+        "An incoming force arrives first. <Subject 1> turns with that momentum. "
+        "One strike then travels from the raised forearm along a short downward path. "
+        "Dust lifts off the floor where the strike lands. "
+        "The face, hair, and clothes stay the same as defined for <Subject 1>."
+    )
+
+
+def performance_sentence(line: str) -> str:
+    """把一句对白写成说话前、说话中、说话后能看见的动作。默认目光避开镜头。"""
+    if "！" in line or "!" in line:
+        during = "the voice stays low and the jaw stays level"
+        after = "the gaze holds on a point beside the lens"
+    elif "？" in line or "?" in line:
+        during = "the voice stays quiet and the pace stays even"
+        after = "one breath leaves through the nose"
+    else:
+        during = "the voice stays quiet and level"
+        after = "the shoulders drop a little and the eyes move aside"
+    return (
+        "Before speaking, the gaze rests on a point beside the lens and the breath holds once. "
+        f"While speaking, {during}, <d>[Chinese] {line}</d> "
+        f"After speaking, {after}."
+    )
 
 
 def gloss_action(text: str) -> str:
@@ -200,9 +300,17 @@ def build_video_prompt(shot: dict, context: dict) -> dict[str, str]:
     framing = _framing_of(shot.get("camera", {}).get("framing", ""), "中景")
     framing_en = _FRAMING_EN[framing]
     seconds = float(shot.get("duration_sec") or 5.17)
-    light = _LIGHT.get(str(context.get("time_of_day", "")), "soft side light")
+    look = context.get("look") or {}
+    light = look.get("light_en") or _LIGHT.get(str(context.get("time_of_day", "")), "soft side light")
     line = _quoted_line(shot)
     has_tail = bool(shot.get("continuation"))
+    fight = is_fight(shot.get("action", ""))
+    if fight:
+        action = fight_sentence(seconds)
+        camera_line = "The camera stays close and shakes once as the dust lifts, then holds."
+    else:
+        action = gloss_action(shot.get("action", ""))
+        camera_line = _CAMERA_EN[framing]
 
     definitions = [
         (
@@ -250,12 +358,8 @@ def build_video_prompt(shot: dict, context: dict) -> dict[str, str]:
     if line:
         summary += " <Audio 1> guides the spoken delivery."
 
-    spoken = ""
     if line:
-        spoken = (
-            f" <Subject 1> (S1) speaks one Mandarin line in a quiet conversational voice, "
-            f"<d>[Chinese] {line}</d> Then the mouth closes."
-        )
+        spoken = " " + performance_sentence(line)
     else:
         spoken = " No one speaks. Room tone is the only sound inside the shot."
 
@@ -266,11 +370,17 @@ def build_video_prompt(shot: dict, context: dict) -> dict[str, str]:
         f"It is a {framing_en}. <Subject 1>, {name}, {appearance}, wearing {wardrobe}, "
         f"{_position(framing)} Both hands hang beside the thighs, and the face stays in focus. "
         f"<Subject 2> fills the background: {place}, {place_detail}, under {light}. "
-        f"<Subject 1> {action}.{tail} {_CAMERA_EN[framing]}{spoken}"
+        f"{action if fight else '<Subject 1> ' + action + '.'}{tail} {camera_line}{spoken}"
     )
-    sound = (
-        f"Room tone of {place} and the physical sound of {light} continue for the whole {seconds:.2f} seconds."
-    )
+    if fight:
+        sound = (
+            f"A dull impact and a short scrape of grit carry the {seconds:.2f} seconds. "
+            "The score stays silent."
+        )
+    else:
+        sound = (
+            f"Room tone of {place} and the physical sound of {light} continue for the whole {seconds:.2f} seconds."
+        )
     sections = {
         "subject_definitions": "\n".join(definitions),
         "summary": summary,

@@ -18,7 +18,7 @@ from cinecore.constants import PROMPT_SECTIONS
 from cinecore.corpus import open_corpus
 from cinecore.errors import CineError
 from cinecore.pipeline import Pipeline
-from cinecore.prompts import compile_h3_from_colloquial, compile_qwen_still, render_prompt_text
+from cinecore.prompts import compile_h3_from_colloquial, compile_qwen_still, infer_still_kind, render_prompt_text
 from cinecore.schema_util import dump_json
 
 _ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -227,7 +227,7 @@ def handle_message(text: str, config: dict) -> str:
     if intent.kind == "help":
         return HELP_TEXT
     if intent.kind == "still":
-        return "Qwen-Image 静帧提示：\n" + compile_qwen_still(intent.body, kind="photo")
+        return "Qwen-Image 静帧提示：\n" + compile_qwen_still(intent.body, kind=infer_still_kind(intent.body))
     if intent.kind == "clip":
         sections = compile_h3_from_colloquial(intent.body, intent.seconds)
         return "MiniMax H3 视频提示：\n" + render_prompt_text(sections)
