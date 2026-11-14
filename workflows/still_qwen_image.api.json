@@ -1,0 +1,65 @@
+{
+  "1": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 768,
+      "height": 1344,
+      "batch_size": 1
+    }
+  },
+  "2": {
+    "class_type": "TextEncodeQwenImage21",
+    "inputs": {
+      "text": "一个人站在窄巷里，远景，双手留在身侧。"
+    },
+    "_cinecore": "这个节点只提供条件，不提供 latent"
+  },
+  "3": {
+    "class_type": "TextEncodeQwenImage21",
+    "inputs": {
+      "text": "手部特写，多余手指，第二个人，低清晰度"
+    }
+  },
+  "4": {
+    "class_type": "KSampler",
+    "inputs": {
+      "seed": 1,
+      "steps": 20,
+      "cfg": 4.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "latent_image": [
+        "1",
+        0
+      ],
+      "positive": [
+        "2",
+        0
+      ],
+      "negative": [
+        "3",
+        0
+      ]
+    }
+  },
+  "5": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "4",
+        0
+      ]
+    }
+  },
+  "6": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "5",
+        0
+      ],
+      "filename_prefix": "cinecore-still-example"
+    }
+  }
+}

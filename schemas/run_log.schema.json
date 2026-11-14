@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/seldoms/cine-core/schemas/run_log.schema.json",
+  "title": "RunLog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "mode",
+    "dry_run",
+    "status",
+    "started_at",
+    "finished_at",
+    "stories",
+    "events"
+  ],
+  "properties": {
+    "run_id": { "type": "string", "minLength": 1 },
+    "mode": { "enum": ["unattended", "supervised"] },
+    "dry_run": { "type": "boolean" },
+    "status": { "enum": ["completed", "running", "interrupted"] },
+    "started_at": { "type": "string", "minLength": 1 },
+    "finished_at": { "type": ["string", "null"] },
+    "stories": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "story_id",
+          "status",
+          "accepted_shots",
+          "quarantined_shots",
+          "duration_sec",
+          "output"
+        ],
+        "properties": {
+          "story_id": { "type": "string" },
+          "status": {
+            "enum": ["completed", "completed_with_quarantine", "quarantined"]
+          },
+          "accepted_shots": { "type": "integer", "minimum": 0 },
+          "quarantined_shots": { "type": "integer", "minimum": 0 },
+          "duration_sec": { "type": "number", "minimum": 0 },
+          "output": { "type": "string" }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["at", "level", "message"],
+        "properties": {
+          "at": { "type": "string" },
+          "level": { "enum": ["info", "warning", "error"] },
+          "message": { "type": "string" },
+          "story_id": { "type": "string" },
+          "shot_id": { "type": "string" }
+        }
+      }
+    }
+  }
+}

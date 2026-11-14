@@ -1,0 +1,8 @@
+{
+  "id": "sample-market-rain",
+  "title": "菜场提前收摊",
+  "source_type": "news",
+  "raw_text": "虚构社区消息。东市菜场因为一场说不清来由的停电传闻，摊主们在午后陆续收摊。消息没有写明是谁先关了灯，也没有人受伤。傍晚市场空了，地面还留着被踩碎的菜叶。",
+  "tags": ["sample", "fiction", "not-a-real-news-item"],
+  "rights_notes": "原创虚构的社区消息体，用来演示新闻由头必须改写成短片，不是真实报道。"
+}

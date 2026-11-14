@@ -1,0 +1,87 @@
+# cine-core v0 示例配置。可以照着跑 dry-run。
+# 主机、密钥留空。需要时用环境变量或本地 .env 覆盖，不要把局域网地址写进仓库。
+
+project:
+  name: cine-core
+
+paths:
+  corpus: samples/corpus
+  runs: runs
+  ledger: data/ledger.json
+
+im:
+  # cine serve 默认只听本机。空 token 不要暴露到公网。
+  host: 127.0.0.1
+  port: 8787
+  token: ""
+  inbox: data/im-inbox
+
+adapt:
+  # rule：v0 自带的规则改编器，不调用云端模型。
+  # llm：预留名，未配置时会明确失败，而不是偷偷请求网络。
+  backend: rule
+
+autonomy:
+  mode: unattended
+  takes_per_shot: 3
+  max_regenerations: 1
+  # 单条短片里隔离镜头达到这个数量，或达到下面的比例，整片进入隔离。
+  # 循环本身继续下一条故事。
+  max_quarantined_shots: 3
+  quarantine_shot_ratio: 0.15
+
+duration:
+  fps: 24
+  target_seconds: 300
+  min_seconds: 270
+  max_seconds: 330
+  # 可用网格 n 的闭区间。frames = 17n+5。n=5 → 90 帧，n=15 → 260 帧。
+  grid_n_min: 5
+  grid_n_max: 15
+
+render:
+  # dry_run：不连 GPU，写模拟产物。comfyui：走本地 ComfyUI 客户端。
+  backend: dry_run
+  video:
+    width: 416
+    height: 736
+  still:
+    width: 768
+    height: 1344
+    latent_node: EmptySD3LatentImage
+  # 打开也只是记录“想后期放大到 720×1280”。v0 不执行放大器，也不把它当成原生画质。
+  upscale_720p: false
+
+comfyui:
+  host: ""
+  timeout_sec: 3600
+  poll_sec: 2
+  max_polls: 1800
+  node_classes:
+    still_latent: EmptySD3LatentImage
+    still_encode: TextEncodeQwenImage21
+    still_sampler: KSampler
+    still_decode: VAEDecode
+    still_save: SaveImage
+    video_sampler: H3Ref2VASampler
+    video_save: SaveVideo
+    load_image: LoadImage
+
+audit:
+  face_distance_max: 0.35
+  long_line_chars: 40
+  fail_on_long_line: false
+  verbatim_window: 18
+
+assemble:
+  loudness_lufs: -16.0
+  true_peak_dbtp: -1.5
+
+dry_run:
+  # 只在 dry-run 生效，用来演示“重拍后仍然失败 → 隔离镜头 → 循环继续”。
+  # 这不是画质模型。真实 GPU 运行会忽略这一段。
+  inject:
+    - story_id: sample-market-rain
+      shot_ordinal: 4
+      defect: hand_closeup
+      survives_regeneration: true

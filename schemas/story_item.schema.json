@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/seldoms/cine-core/schemas/story_item.schema.json",
+  "title": "StoryItem",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "source_type", "raw_text"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "source_type": { "enum": ["news", "touching", "interesting"] },
+    "raw_text": { "type": "string", "minLength": 1 },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "rights_notes": { "type": "string" }
+  }
+}
